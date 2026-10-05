@@ -35,7 +35,8 @@ jobs:
           mkdir dist
           version="${GITHUB_REF_NAME#v}"
           git archive --format=tar.gz --prefix="wago-zlib-$version/" -o "dist/wago-zlib-${GITHUB_REF_NAME}.tar.gz" "$GITHUB_REF_NAME"
-          sha256sum "dist/wago-zlib-${GITHUB_REF_NAME}.tar.gz" > "dist/wago-zlib-${GITHUB_REF_NAME}.tar.gz.sha256"
+          cd dist
+          sha256sum "wago-zlib-${GITHUB_REF_NAME}.tar.gz" > "wago-zlib-${GITHUB_REF_NAME}.tar.gz.sha256"
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
