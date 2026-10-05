@@ -18,6 +18,22 @@ Every module exports:
 abi_version() -> i32                         // always 1
 ```
 
+Each storage namespace has both its original multi-result imports and additive
+single-result packed imports. The packed functions take exactly the same
+parameters as their namesakes and return one `i64`:
+
+```text
+bits  0..31: status as an unsigned i32
+bits 32..63: written as an unsigned i32
+```
+
+Guests unpack with `status = i32.wrap_i64(result)` and
+`written = i32.wrap_i64(i64.shr_u(result, 32))`. Every nonzero status has a
+zero high half. The configured 64 MiB output ceiling guarantees that every
+successful `written` value fits in the packed unsigned 32-bit field, including
+for the Wasm64 storage namespace. `abi_version()` remains 1 because this is an
+additive extension and the legacy imports are unchanged.
+
 `wago_zlib.wasm32` uses first-memory memory32:
 
 ```text
@@ -28,6 +44,13 @@ compress(src_ptr:i32, src_len:i32,
 decompress(src_ptr:i32, src_len:i32,
            dst_ptr:i32, dst_cap:i32)
         -> (status:i32, written:i32)
+
+compress_packed(src_ptr:i32, src_len:i32,
+                dst_ptr:i32, dst_cap:i32,
+                level:i32) -> packed:i64
+
+decompress_packed(src_ptr:i32, src_len:i32,
+                  dst_ptr:i32, dst_cap:i32) -> packed:i64
 ```
 
 `wago_zlib.wasm64` uses first-memory memory64:
@@ -40,6 +63,13 @@ compress(src_ptr:i64, src_len:i64,
 decompress(src_ptr:i64, src_len:i64,
            dst_ptr:i64, dst_cap:i64)
         -> (status:i32, written:i64)
+
+compress_packed(src_ptr:i64, src_len:i64,
+                dst_ptr:i64, dst_cap:i64,
+                level:i32) -> packed:i64
+
+decompress_packed(src_ptr:i64, src_len:i64,
+                  dst_ptr:i64, dst_cap:i64) -> packed:i64
 ```
 
 `wago_zlib.gc` uses caller-defined packed byte arrays. `src` may be mutable or
@@ -53,6 +83,14 @@ compress(src:(ref array<i8>), src_offset:i32, src_len:i32,
 decompress(src:(ref array<i8>), src_offset:i32, src_len:i32,
            dst:(ref (mut array<i8>)), dst_offset:i32, dst_cap:i32)
         -> (status:i32, written:i32)
+
+compress_packed(src:(ref array<i8>), src_offset:i32, src_len:i32,
+                dst:(ref (mut array<i8>)), dst_offset:i32, dst_cap:i32,
+                level:i32) -> packed:i64
+
+decompress_packed(src:(ref array<i8>), src_offset:i32, src_len:i32,
+                  dst:(ref (mut array<i8>)), dst_offset:i32, dst_cap:i32)
+        -> packed:i64
 ```
 
 Go zlib levels are accepted: `-2` (`HuffmanOnly`), `-1` (default), and `0`

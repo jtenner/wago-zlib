@@ -6,7 +6,7 @@
       "definition": {
         "id": "github.com/jtenner/wago-zlib",
         "name": "Zlib",
-        "version": "0.0.0",
+        "version": "0.0.1",
         "description": "Bounded zlib-wrapped DEFLATE compression and decompression.",
         "stability": "experimental",
         "compatibility": {
@@ -66,7 +66,7 @@
           "type": "object"
         }
       },
-      "definitionDigest": "sha256:dc1e1a9e757a42c76b3ca68e51514481e57f96ed707123e31fc23dd4a07a7e70"
+      "definitionDigest": "sha256:d3caae4ed1fd6b77f6aadfd6abf2f82ad951902c3a7dc8d6ad365c6bceedd4d8"
     }
   ]
 }

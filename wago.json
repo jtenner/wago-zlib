@@ -2,7 +2,7 @@
   "$schema": "https://wago.sh/v1/schema.json",
   "package": {
     "module": "github.com/jtenner/wago-zlib",
-    "version": "0.0.0",
+    "version": "0.0.1",
     "name": "Zlib",
     "description": "Bounded zlib-wrapped DEFLATE compression and decompression.",
     "stability": "experimental",

@@ -40,6 +40,12 @@ null references, non-byte arrays, and immutable output arrays.
 See [the ABI v1 specification](docs/abi-v1.md) for exact signatures and status
 behavior.
 
+ABI v1 retains the original multi-result `compress` and `decompress` imports
+and also provides additive single-result `compress_packed` and
+`decompress_packed` imports in all three modules. The packed form is convenient
+for guest compilers such as TinyGo that support an `i64` result but not imported
+Wasm functions with multiple results.
+
 ## Configuration
 
 Configuration is strict JSON in the reviewed Wago plugin selection:
@@ -99,7 +105,8 @@ there is no additional plugin resource lifecycle.
 go test ./...
 go test -race ./...
 go vet ./...
-go test -run '^$' -bench 'Benchmark(Compress|Decompress)1KiB' -benchmem
+go test -run '^$' -bench 'Benchmark(Wago)?(Compress|Decompress)1KiB' -benchmem
+scripts/check-packed-fixtures.sh # requires wasm-tools 1.251.0
 ```
 
 Benchmarks are smoke measurements for regressions, not claims that this wrapper
@@ -108,21 +115,23 @@ is allocation-free or the fastest zlib implementation.
 ### TinyGo host qualification
 
 Dedicated CI builds and executes this plugin as part of a native Wago host with
-TinyGo 0.41.1, Go 1.22.12, the `tasks` scheduler, and four build workers on
-Linux/amd64. Codec/error-policy tests run with the ordinary TinyGo test build;
-the wasm32, wasm64, and WasmGC Wago integration tests also run with Wago's
-release settings: `-no-debug -opt=z -gc=conservative`.
+TinyGo 0.42.0, Go 1.27.1, the `tasks` scheduler, and at most two build workers
+on Linux/amd64. The job applies TinyGo's documented upstream task-exit fix used
+by Wago, then executes codec/error-policy tests and all three Wago ABIs with
+Wago's release settings: `-no-debug -opt=z -gc=conservative`.
 
-This is a TinyGo **host** qualification: the TinyGo-built native process loads
-and invokes the Wasm fixtures. The fixtures are intentionally generated as
-WebAssembly binaries by the test harness so all three Wago guest ABIs can be
-covered. It is not a claim that TinyGo produced those Wasm guests, and it does
-not qualify a TinyGo guest compiler target or any host platform other than
-Linux/amd64.
+The same job builds a genuine `wasm32-unknown-unknown` guest with TinyGo
+0.42.0. Both an ordinary Go host and a TinyGo-built Wago host execute that
+guest's packed-ABI round trips and error cases. TinyGo 0.42.0 has no Wasm64 or
+Wasm GC output target, so generated-guest support is intentionally limited to
+Wasm32. The plugin's Wasm64 and Wasm GC packed imports are instead exercised by
+checked-in WAT guests under both host compilers. This qualification makes no
+claim about other TinyGo versions, guest targets, or host platforms.
 
 Run the same bounded qualification with the pinned tools on `PATH`:
 
 ```sh
+scripts/build-tinygo-guest.sh
 scripts/test-tinygo-host.sh
 ```
 

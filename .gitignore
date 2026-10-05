@@ -2,4 +2,5 @@
 /dist/
 /.tmp/
 /wago-zlib.test
+/testdata/tinygo-wasm32-packed.generated.wasm
 *.prof

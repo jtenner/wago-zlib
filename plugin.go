@@ -26,7 +26,7 @@ func Definition() wago.PluginDefinition {
 	return wago.PluginDefinition{
 		ID:          ID,
 		Name:        "Zlib",
-		Version:     "0.0.0",
+		Version:     "0.0.1",
 		Description: "Bounded zlib-wrapped DEFLATE compression and decompression.",
 		Stability:   wago.Experimental,
 		Compatibility: wago.Compatibility{
@@ -105,6 +105,16 @@ func (p *Plugin) Register(reg *wago.Registrar) error {
 		Results(wago.ValI32, wago.ValI32).
 		Capability(Capability).
 		Docs("decompress exactly one checksum-verified zlib stream in first-memory memory32")
+	imports.HostFunc(ModuleWasm32, "compress_packed", p.compressPacked32).
+		Params(wago.ValI32, wago.ValI32, wago.ValI32, wago.ValI32, wago.ValI32).
+		Results(wago.ValI64).
+		Capability(Capability).
+		Docs("compress one first-memory memory32 slice and return status:written packed into one i64")
+	imports.HostFunc(ModuleWasm32, "decompress_packed", p.decompressPacked32).
+		Params(wago.ValI32, wago.ValI32, wago.ValI32, wago.ValI32).
+		Results(wago.ValI64).
+		Capability(Capability).
+		Docs("decompress exactly one checksum-verified zlib stream and return status:written packed into one i64")
 	imports.HostFunc(ModuleWasm64, "compress", p.compress64).
 		Params(wago.ValI64, wago.ValI64, wago.ValI64, wago.ValI64, wago.ValI32).
 		Results(wago.ValI32, wago.ValI64).
@@ -115,6 +125,16 @@ func (p *Plugin) Register(reg *wago.Registrar) error {
 		Results(wago.ValI32, wago.ValI64).
 		Capability(Capability).
 		Docs("decompress exactly one checksum-verified zlib stream in first-memory memory64")
+	imports.HostFunc(ModuleWasm64, "compress_packed", p.compressPacked64).
+		Params(wago.ValI64, wago.ValI64, wago.ValI64, wago.ValI64, wago.ValI32).
+		Results(wago.ValI64).
+		Capability(Capability).
+		Docs("compress one first-memory memory64 slice and return status:written packed into one i64")
+	imports.HostFunc(ModuleWasm64, "decompress_packed", p.decompressPacked64).
+		Params(wago.ValI64, wago.ValI64, wago.ValI64, wago.ValI64).
+		Results(wago.ValI64).
+		Capability(Capability).
+		Docs("decompress exactly one checksum-verified zlib stream and return status:written packed into one i64")
 	imports.HostFunc(ModuleGC, "compress", p.compressGC).
 		Params(wago.ValAnyRef, wago.ValI32, wago.ValI32, wago.ValAnyRef, wago.ValI32, wago.ValI32, wago.ValI32).
 		Results(wago.ValI32, wago.ValI32).
@@ -125,34 +145,79 @@ func (p *Plugin) Register(reg *wago.Registrar) error {
 		Results(wago.ValI32, wago.ValI32).
 		Capability(Capability).
 		Docs("decompress exactly one checksum-verified zlib stream between byte arrays")
+	imports.HostFunc(ModuleGC, "compress_packed", p.compressPackedGC).
+		Params(wago.ValAnyRef, wago.ValI32, wago.ValI32, wago.ValAnyRef, wago.ValI32, wago.ValI32, wago.ValI32).
+		Results(wago.ValI64).
+		Capability(Capability).
+		Docs("compress one byte-array slice and return status:written packed into one i64")
+	imports.HostFunc(ModuleGC, "decompress_packed", p.decompressPackedGC).
+		Params(wago.ValAnyRef, wago.ValI32, wago.ValI32, wago.ValAnyRef, wago.ValI32, wago.ValI32).
+		Results(wago.ValI64).
+		Capability(Capability).
+		Docs("decompress exactly one checksum-verified zlib stream and return status:written packed into one i64")
 	return nil
 }
 
 func (p *Plugin) compress32(caller wago.Caller, call wago.HostCall) {
-	p.transformMemory(caller, call, true, false)
+	p.transformMemory(caller, call, true, false, false)
 }
 
 func (p *Plugin) decompress32(caller wago.Caller, call wago.HostCall) {
-	p.transformMemory(caller, call, false, false)
+	p.transformMemory(caller, call, false, false, false)
+}
+
+func (p *Plugin) compressPacked32(caller wago.Caller, call wago.HostCall) {
+	p.transformMemory(caller, call, true, false, true)
+}
+
+func (p *Plugin) decompressPacked32(caller wago.Caller, call wago.HostCall) {
+	p.transformMemory(caller, call, false, false, true)
 }
 
 func (p *Plugin) compress64(caller wago.Caller, call wago.HostCall) {
-	p.transformMemory(caller, call, true, true)
+	p.transformMemory(caller, call, true, true, false)
 }
 
 func (p *Plugin) decompress64(caller wago.Caller, call wago.HostCall) {
-	p.transformMemory(caller, call, false, true)
+	p.transformMemory(caller, call, false, true, false)
+}
+
+func (p *Plugin) compressPacked64(caller wago.Caller, call wago.HostCall) {
+	p.transformMemory(caller, call, true, true, true)
+}
+
+func (p *Plugin) decompressPacked64(caller wago.Caller, call wago.HostCall) {
+	p.transformMemory(caller, call, false, true, true)
 }
 
 func (p *Plugin) compressGC(caller wago.Caller, call wago.HostCall) {
-	p.transformGC(caller, call, true)
+	p.transformGC(caller, call, true, false)
 }
 
 func (p *Plugin) decompressGC(caller wago.Caller, call wago.HostCall) {
-	p.transformGC(caller, call, false)
+	p.transformGC(caller, call, false, false)
 }
 
-func setMemoryResult(call wago.HostCall, memory64 bool, status Status, written uint64) {
+func (p *Plugin) compressPackedGC(caller wago.Caller, call wago.HostCall) {
+	p.transformGC(caller, call, true, true)
+}
+
+func (p *Plugin) decompressPackedGC(caller wago.Caller, call wago.HostCall) {
+	p.transformGC(caller, call, false, true)
+}
+
+func packedResult(status Status, written uint64) uint64 {
+	if status != StatusOK {
+		written = 0
+	}
+	return uint64(uint32(status)) | uint64(uint32(written))<<32
+}
+
+func setMemoryResult(call wago.HostCall, memory64, packed bool, status Status, written uint64) {
+	if packed {
+		call.SetI64(0, int64(packedResult(status, written)))
+		return
+	}
 	call.SetI32(0, int32(status))
 	if memory64 {
 		call.SetI64(1, int64(written))
@@ -161,8 +226,8 @@ func setMemoryResult(call wago.HostCall, memory64 bool, status Status, written u
 	}
 }
 
-func (p *Plugin) transformMemory(caller wago.Caller, call wago.HostCall, compress, memory64 bool) {
-	setMemoryResult(call, memory64, StatusInternalError, 0)
+func (p *Plugin) transformMemory(caller wago.Caller, call wago.HostCall, compress, memory64, packed bool) {
+	setMemoryResult(call, memory64, packed, StatusInternalError, 0)
 
 	var srcPtr, srcLen, dstPtr, dstLen uint64
 	if memory64 {
@@ -177,22 +242,22 @@ func (p *Plugin) transformMemory(caller wago.Caller, call wago.HostCall, compres
 		dstLen = uint64(uint32(call.I32(3)))
 	}
 	if srcLen > uint64(p.cfg.MaxInputBytes) {
-		setMemoryResult(call, memory64, StatusInputTooLarge, 0)
+		setMemoryResult(call, memory64, packed, StatusInputTooLarge, 0)
 		return
 	}
 	if dstLen > uint64(p.cfg.MaxOutputBytes) {
-		setMemoryResult(call, memory64, StatusOutputTooLarge, 0)
+		setMemoryResult(call, memory64, packed, StatusOutputTooLarge, 0)
 		return
 	}
 	if !p.acquire() {
-		setMemoryResult(call, memory64, StatusBusy, 0)
+		setMemoryResult(call, memory64, packed, StatusBusy, 0)
 		return
 	}
 	defer p.release()
 
 	host, ok := any(caller).(wago.GuestStorageHostModule)
 	if !ok {
-		setMemoryResult(call, memory64, StatusUnsupported, 0)
+		setMemoryResult(call, memory64, packed, StatusUnsupported, 0)
 		return
 	}
 	status := StatusUnsupported
@@ -230,34 +295,42 @@ func (p *Plugin) transformMemory(caller wago.Caller, call wago.HostCall, compres
 		status = StatusUnsupported
 		written = 0
 	}
-	setMemoryResult(call, memory64, status, written)
+	setMemoryResult(call, memory64, packed, status, written)
 }
 
-func (p *Plugin) transformGC(caller wago.Caller, call wago.HostCall, compress bool) {
-	call.SetI32(0, int32(StatusInternalError))
-	call.SetI32(1, 0)
+func setGCResult(call wago.HostCall, packed bool, status Status, written int) {
+	if packed {
+		call.SetI64(0, int64(packedResult(status, uint64(written))))
+		return
+	}
+	call.SetI32(0, int32(status))
+	call.SetI32(1, int32(uint32(written)))
+}
+
+func (p *Plugin) transformGC(caller wago.Caller, call wago.HostCall, compress, packed bool) {
+	setGCResult(call, packed, StatusInternalError, 0)
 
 	srcOffset := uint64(uint32(call.I32(1)))
 	srcLen := uint64(uint32(call.I32(2)))
 	dstOffset := uint64(uint32(call.I32(4)))
 	dstLen := uint64(uint32(call.I32(5)))
 	if srcLen > uint64(p.cfg.MaxInputBytes) {
-		call.SetI32(0, int32(StatusInputTooLarge))
+		setGCResult(call, packed, StatusInputTooLarge, 0)
 		return
 	}
 	if dstLen > uint64(p.cfg.MaxOutputBytes) {
-		call.SetI32(0, int32(StatusOutputTooLarge))
+		setGCResult(call, packed, StatusOutputTooLarge, 0)
 		return
 	}
 	if !p.acquire() {
-		call.SetI32(0, int32(StatusBusy))
+		setGCResult(call, packed, StatusBusy, 0)
 		return
 	}
 	defer p.release()
 
 	host, ok := any(caller).(wago.GuestStorageHostModule)
 	if !ok {
-		call.SetI32(0, int32(StatusUnsupported))
+		setGCResult(call, packed, StatusUnsupported, 0)
 		return
 	}
 	status := StatusUnsupported
@@ -320,8 +393,7 @@ func (p *Plugin) transformGC(caller wago.Caller, call wago.HostCall, compress bo
 		status = StatusUnsupported
 		written = 0
 	}
-	call.SetI32(0, int32(status))
-	call.SetI32(1, int32(uint32(written)))
+	setGCResult(call, packed, status, written)
 }
 
 func (p *Plugin) acquire() bool {

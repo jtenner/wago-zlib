@@ -2,19 +2,19 @@
 set -euo pipefail
 
 tinygo_cmd="${TINYGO:-tinygo}"
-jobs="${TINYGO_JOBS:-4}"
+jobs="${TINYGO_JOBS:-2}"
 
 go_version="$(go version)"
-if [[ "$go_version" != "go version go1.22.12 linux/amd64" ]]; then
-  echo "TinyGo host qualification requires go1.22.12 linux/amd64; got: $go_version" >&2
+if [[ "$go_version" != "go version go1.27.1 linux/amd64" ]]; then
+  echo "TinyGo host qualification requires go1.27.1 linux/amd64; got: $go_version" >&2
   exit 1
 fi
 
 tinygo_version="$($tinygo_cmd version)"
 case "$tinygo_version" in
-  "tinygo version 0.41.1 linux/amd64 (using go version go1.22.12 and LLVM version "*")") ;;
+  "tinygo version 0.42.0 linux/amd64 (using go version go1.27.1 and LLVM version "*")") ;;
   *)
-    echo "TinyGo host qualification requires TinyGo 0.41.1 linux/amd64 with Go 1.22.12; got: $tinygo_version" >&2
+    echo "TinyGo host qualification requires TinyGo 0.42.0 linux/amd64 with Go 1.27.1; got: $tinygo_version" >&2
     exit 1
     ;;
 esac
@@ -54,7 +54,8 @@ require_passes "$log_dir/codec.log" \
 
 echo "==> TinyGo-hosted Wago ABI execution (release compiler settings)"
 "$tinygo_cmd" test -p="$jobs" -scheduler=tasks -no-debug -opt=z -gc=conservative -count=1 -v \
-  -run '^(TestDefinitionAndConfig|TestOperationSlotsAreNonBlockingAndPerPlugin|TestWagoLinearMemoryEndToEnd|TestWagoConfiguredLimits|TestWagoBusyStatus|TestWagoGCByteArrayEndToEnd|TestWagoGCImmutableInputSuccess|TestWagoGCRejectsWrongAndImmutableArrays|TestWagoGCBoundsImmutableInputCopy)$' \
+  -tags=tinygo_guest_qualification \
+  -run '^(TestDefinitionAndConfig|TestOperationSlotsAreNonBlockingAndPerPlugin|TestWagoLinearMemoryEndToEnd|TestWagoConfiguredLimits|TestWagoBusyStatus|TestWagoGCByteArrayEndToEnd|TestWagoGCImmutableInputSuccess|TestWagoGCRejectsWrongAndImmutableArrays|TestWagoGCBoundsImmutableInputCopy|TestWagoPackedWATParity|TestPackedResultLayoutAndFailureInvariant|TestTinyGoProducedPackedWasm32Guest)$' \
   . | tee "$log_dir/abi.log"
 require_passes "$log_dir/abi.log" \
   TestDefinitionAndConfig \
@@ -69,7 +70,21 @@ require_passes "$log_dir/abi.log" \
   TestWagoGCRejectsWrongAndImmutableArrays \
   TestWagoGCRejectsWrongAndImmutableArrays/i32-array \
   TestWagoGCRejectsWrongAndImmutableArrays/immutable-i8-output \
-  TestWagoGCBoundsImmutableInputCopy
+  TestWagoGCBoundsImmutableInputCopy \
+  TestWagoPackedWATParity \
+  TestWagoPackedWATParity/wasm32 \
+  TestWagoPackedWATParity/wasm64 \
+  TestWagoPackedWATParity/gc \
+  TestPackedResultLayoutAndFailureInvariant \
+  TestTinyGoProducedPackedWasm32Guest \
+  TestTinyGoProducedPackedWasm32Guest/roundtrip \
+  TestTinyGoProducedPackedWasm32Guest/empty \
+  TestTinyGoProducedPackedWasm32Guest/overlap_case \
+  TestTinyGoProducedPackedWasm32Guest/output_small \
+  TestTinyGoProducedPackedWasm32Guest/bounds \
+  TestTinyGoProducedPackedWasm32Guest/checksum \
+  TestTinyGoProducedPackedWasm32Guest/truncated \
+  TestTinyGoProducedPackedWasm32Guest/invalid_level
 
 echo "==> TinyGo provider registration execution"
 "$tinygo_cmd" test -p="$jobs" -scheduler=tasks -count=1 -v ./register | tee "$log_dir/register.log"

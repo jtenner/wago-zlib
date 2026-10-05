@@ -8,8 +8,39 @@ permissions:
   contents: write
 
 jobs:
+  tinygo-host:
+    name: TinyGo release qualification / Linux amd64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.1"
+          cache-dependency-path: go.sum
+      - uses: acifani/setup-tinygo@db56321a62b9a67922bb9ac8f9d085e218807bb3 # v2
+        with:
+          tinygo-version: "0.42.0"
+          install-binaryen: false
+      - name: Install TinyGo native linker
+        run: sudo apt-get update && sudo apt-get install -y lld
+      - name: Apply upstream TinyGo scheduler fix
+        run: scripts/patch-tinygo-042.sh
+      - name: Build and execute TinyGo guest in Go host
+        env:
+          GOMAXPROCS: "2"
+          TINYGO_JOBS: "2"
+        run: |
+          scripts/build-tinygo-guest.sh
+          go test -tags=tinygo_guest_qualification -run '^TestTinyGoProducedPackedWasm32Guest$' -count=1 -v .
+      - name: Execute TinyGo-hosted codec and Wago ABI integration
+        env:
+          GOMAXPROCS: "2"
+          TINYGO_JOBS: "2"
+        run: scripts/test-tinygo-host.sh
+
   release:
     name: Qualify and publish source
+    needs: tinygo-host
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,6 +60,18 @@ jobs:
       - run: go test -race -shuffle=on -count=1 ./...
       - name: Verify provider catalog
         run: go run github.com/wago-org/wago/cli/wago@v0.1.0-beta.11 plugin catalog --check --manifest wago.json --no-input
+      - name: Install pinned wasm-tools
+        shell: bash
+        run: |
+          archive="${RUNNER_TEMP}/wasm-tools-1.251.0-x86_64-linux.tar.gz"
+          install_dir="${RUNNER_TEMP}/wasm-tools"
+          curl -fsSLo "$archive" https://github.com/bytecodealliance/wasm-tools/releases/download/v1.251.0/wasm-tools-1.251.0-x86_64-linux.tar.gz
+          echo "08d523676ec71d9afbae05aa4255041ce91bf2d325d87b7e722d190d558be689  $archive" | sha256sum -c -
+          mkdir "$install_dir"
+          tar -xzf "$archive" -C "$install_dir" --strip-components=1
+          echo "$install_dir" >> "$GITHUB_PATH"
+      - name: Verify WAT fixture freshness
+        run: scripts/check-packed-fixtures.sh
       - name: Build source archive
         shell: bash
         run: |
@@ -46,4 +89,4 @@ jobs:
           "dist/wago-zlib-${GITHUB_REF_NAME}.tar.gz.sha256"
           --verify-tag
           --title "$GITHUB_REF_NAME"
-          --notes "Experimental Wago zlib plugin test release. Supports wasm32, wasm64, and WasmGC byte-array ABIs."
+          --notes "Experimental Wago zlib plugin test release. Supports legacy and packed-result wasm32, wasm64, and WasmGC byte-array ABIs."
