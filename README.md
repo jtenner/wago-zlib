@@ -105,6 +105,27 @@ go test -run '^$' -bench 'Benchmark(Compress|Decompress)1KiB' -benchmem
 Benchmarks are smoke measurements for regressions, not claims that this wrapper
 is allocation-free or the fastest zlib implementation.
 
+### TinyGo host qualification
+
+Dedicated CI builds and executes this plugin as part of a native Wago host with
+TinyGo 0.41.1, Go 1.22.12, the `tasks` scheduler, and four build workers on
+Linux/amd64. Codec/error-policy tests run with the ordinary TinyGo test build;
+the wasm32, wasm64, and WasmGC Wago integration tests also run with Wago's
+release settings: `-no-debug -opt=z -gc=conservative`.
+
+This is a TinyGo **host** qualification: the TinyGo-built native process loads
+and invokes the Wasm fixtures. The fixtures are intentionally generated as
+WebAssembly binaries by the test harness so all three Wago guest ABIs can be
+covered. It is not a claim that TinyGo produced those Wasm guests, and it does
+not qualify a TinyGo guest compiler target or any host platform other than
+Linux/amd64.
+
+Run the same bounded qualification with the pinned tools on `PATH`:
+
+```sh
+scripts/test-tinygo-host.sh
+```
+
 ## License
 
 Apache-2.0. Go standard-library attribution is recorded in
