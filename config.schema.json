@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "maxInputBytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 67108864,
+      "default": 8388608,
+      "description": "Maximum compressed or uncompressed input bytes per operation."
+    },
+    "maxOutputBytes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 67108864,
+      "default": 33554432,
+      "description": "Maximum guest output capacity and transaction staging bytes per operation."
+    },
+    "maxConcurrentOperations": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8,
+      "default": 2,
+      "description": "Maximum simultaneous compression and decompression calls per Wago runtime."
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://wago.sh/v1/schema.json",
+  "package": {
+    "module": "github.com/jtenner/wago-zlib",
+    "version": "0.0.0",
+    "name": "Zlib",
+    "description": "Bounded zlib-wrapped DEFLATE compression and decompression.",
+    "stability": "experimental",
+    "license": "Apache-2.0",
+    "repository": "https://github.com/jtenner/wago-zlib",
+    "homepage": "https://github.com/jtenner/wago-zlib",
+    "category": "compression",
+    "tags": ["compression", "deflate", "wasm", "zlib"],
+    "authors": [
+      {"name": "Josh Tenner", "github": "jtenner"}
+    ],
+    "engines": {
+      "wago": ">=0.1.0-beta.11",
+      "go": ">=1.22"
+    }
+  }
+}

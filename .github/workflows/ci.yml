@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Linux amd64 / Go ${{ matrix.go }}
+    strategy:
+      fail-fast: false
+      matrix:
+        go: ["1.22.x", stable]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          cache-dependency-path: go.sum
+      - name: Format
+        shell: bash
+        run: |
+          unformatted="$(git ls-files -z '*.go' | xargs -0 gofmt -l)"
+          test -z "$unformatted" || { echo "$unformatted"; exit 1; }
+      - run: go vet ./...
+      - run: go test -race -shuffle=on -count=1 ./...
+      - name: Provider catalog is current
+        run: go run github.com/wago-org/wago/cli/wago@v0.1.0-beta.11 plugin catalog --check --manifest wago.json --no-input

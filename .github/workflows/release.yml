@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Qualify and publish source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache-dependency-path: go.sum
+      - name: Verify version metadata
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          grep -F '"version": "'"$version"'"' wago.json
+          grep -F 'Version:     "'"$version"'"' plugin.go
+      - run: go vet ./...
+      - run: go test -race -shuffle=on -count=1 ./...
+      - name: Verify provider catalog
+        run: go run github.com/wago-org/wago/cli/wago@v0.1.0-beta.11 plugin catalog --check --manifest wago.json --no-input
+      - name: Build source archive
+        shell: bash
+        run: |
+          mkdir dist
+          version="${GITHUB_REF_NAME#v}"
+          git archive --format=tar.gz --prefix="wago-zlib-$version/" -o "dist/wago-zlib-${GITHUB_REF_NAME}.tar.gz" "$GITHUB_REF_NAME"
+          sha256sum "dist/wago-zlib-${GITHUB_REF_NAME}.tar.gz" > "dist/wago-zlib-${GITHUB_REF_NAME}.tar.gz.sha256"
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME"
+          "dist/wago-zlib-${GITHUB_REF_NAME}.tar.gz"
+          "dist/wago-zlib-${GITHUB_REF_NAME}.tar.gz.sha256"
+          --verify-tag
+          --title "$GITHUB_REF_NAME"
+          --notes "Experimental Wago zlib plugin test release. Supports wasm32, wasm64, and WasmGC byte-array ABIs."

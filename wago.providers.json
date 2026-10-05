@@ -1,0 +1,72 @@
+{
+  "$schema": "https://wago.sh/v1/providers.schema.json",
+  "providers": [
+    {
+      "importPath": "github.com/jtenner/wago-zlib/register",
+      "definition": {
+        "id": "github.com/jtenner/wago-zlib",
+        "name": "Zlib",
+        "version": "0.0.0",
+        "description": "Bounded zlib-wrapped DEFLATE compression and decompression.",
+        "stability": "experimental",
+        "compatibility": {
+          "engines": {
+            "go": "\u003e=1.22",
+            "wago": "\u003e=0.1.0-beta.11"
+          }
+        },
+        "provenance": {
+          "homepage": "https://github.com/jtenner/wago-zlib",
+          "repository": "https://github.com/jtenner/wago-zlib",
+          "license": "Apache-2.0",
+          "authors": [
+            "Josh Tenner"
+          ]
+        },
+        "authorities": [
+          {
+            "name": "host.import.define",
+            "mode": "required",
+            "reason": "define the bounded wago_zlib guest APIs",
+            "scope": {
+              "modules": [
+                "wago_zlib.gc",
+                "wago_zlib.wasm32",
+                "wago_zlib.wasm64"
+              ]
+            }
+          }
+        ],
+        "configSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "additionalProperties": false,
+          "properties": {
+            "maxConcurrentOperations": {
+              "default": 2,
+              "description": "Maximum simultaneous compression and decompression calls per Wago runtime.",
+              "maximum": 8,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "maxInputBytes": {
+              "default": 8388608,
+              "description": "Maximum compressed or uncompressed input bytes per operation.",
+              "maximum": 67108864,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "maxOutputBytes": {
+              "default": 33554432,
+              "description": "Maximum guest output capacity and transaction staging bytes per operation.",
+              "maximum": 67108864,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "definitionDigest": "sha256:dc1e1a9e757a42c76b3ca68e51514481e57f96ed707123e31fc23dd4a07a7e70"
+    }
+  ]
+}
